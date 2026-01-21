@@ -1,16 +1,57 @@
 ---
-
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Hero from '../components/Hero.astro';
+import Footer from '../components/Footer.astro';
+import PlaceCard from '../components/PlaceCard.astro';
+import Map from '../components/Map.astro';
+import { puntos } from '../data/points.js';
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout title="Ruta de los Azulejos Cervantinos | Sevilla">
+	<Header />
+	
+	<main>
+		<Hero />
+		
+		<section id="mapa" class="py-24 bg-white relative">
+			<div class="container mx-auto px-4 md:px-6">
+				<div class="text-center mb-16 reveal">
+                    <span class="text-amber-600 font-bold tracking-wider text-sm uppercase mb-2 block">Itinerario</span>
+					<h2 class="text-3xl md:text-5xl font-bold font-serif text-stone-900 mb-6">Mapa del Recorrido</h2>
+					<p class="text-stone-600 text-lg max-w-2xl mx-auto font-light">
+						Visualiza la ubicación exacta de cada azulejo y sigue la ruta que conecta los escenarios históricos de "Rinconete y Cortadillo".
+					</p>
+				</div>
+				
+                <div class="reveal stagger-1">
+				    <Map puntos={puntos} />
+                </div>
+			</div>
+		</section>
+
+		<section id="lugares" class="py-24 bg-stone-50 border-t border-stone-200">
+			<div class="container mx-auto px-4 md:px-6">
+				<div class="text-center mb-20 reveal">
+                    <span class="text-amber-600 font-bold tracking-wider text-sm uppercase mb-2 block">Puntos de Interés</span>
+					<h2 class="text-3xl md:text-5xl font-bold font-serif text-stone-900 mb-6">Detalle de las Paradas</h2>
+					<p class="text-stone-600 text-lg max-w-2xl mx-auto font-light">
+						Cada ubicación guarda un fragmento de la historia literaria de Sevilla.
+					</p>
+				</div>
+				
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+					{puntos.map((punto, index) => (
+						<PlaceCard 
+							nombre={punto.nombre} 
+							texto={punto.texto} 
+							index={index} 
+						/>
+					))}
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<Footer />
+</Layout>

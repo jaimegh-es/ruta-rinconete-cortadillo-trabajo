@@ -1,0 +1,183 @@
+---
+import 'leaflet/dist/leaflet.css';
+
+interface Props {
+  puntos: {
+    nombre: string;
+    coords: number[];
+    texto: string;
+  }[];
+  isEmbedPage?: boolean;
+}
+
+const { puntos, isEmbedPage = false } = Astro.props;
+---
+
+<div id="map-wrapper" class={`relative w-full transition-all duration-500 ease-in-out ${isEmbedPage ? 'h-full' : 'h-[500px] md:h-[600px] lg:h-[700px]'} rounded-2xl shadow-xl border border-stone-200 group`}>
+    
+    <div id="map" class="w-full h-full z-0 rounded-2xl"></div>
+    
+    <!-- Loading overlay -->
+    <div id="map-loading" class="absolute inset-0 bg-stone-100 flex items-center justify-center z-[1000] rounded-2xl">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+    </div>
+
+    { !isEmbedPage && (
+        <div class="absolute top-4 right-4 z-[900] flex flex-col gap-2">
+            <!-- Fullscreen Button -->
+            <button 
+                id="fullscreen-btn"
+                class="bg-white text-stone-700 p-2.5 rounded-lg shadow-md hover:bg-stone-50 hover:text-amber-700 transition-colors border border-stone-200"
+                title="Pantalla completa"
+                aria-label="Pantalla completa"
+            >
+                <svg id="icon-expand" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                <svg id="icon-compress" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+            </button>
+
+            <!-- Copy URL Button -->
+            <button 
+                id="embed-btn"
+                class="bg-white text-stone-700 p-2.5 rounded-lg shadow-md hover:bg-stone-50 hover:text-amber-700 transition-colors border border-stone-200"
+                title="Copiar enlace para embeber mapa"
+                aria-label="Copiar enlace"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            </button>
+        </div>
+    )}
+    
+    <!-- Toast notification -->
+    <div id="toast" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1001] bg-stone-800 text-white px-4 py-2 rounded-full shadow-lg text-sm opacity-0 transition-all duration-300 pointer-events-none translate-y-[-10px] flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        URL copiada
+    </div>
+</div>
+
+<script>
+    import L from 'leaflet';
+
+    const container = document.getElementById('map-wrapper');
+    const mapDiv = document.getElementById('map');
+    
+    // Fix for default marker icons
+    // @ts-ignore
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+    });
+
+    if (container && container.dataset.puntos) {
+        const puntos = JSON.parse(container.dataset.puntos);
+        
+        const map = L.map('map', {
+            zoomControl: false // We'll add it back in a specific position if needed, or let default
+        }).setView([37.3886, -5.9823], 15);
+        
+        L.control.zoom({
+            position: 'bottomright'
+        }).addTo(map);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        const rutaCoords = [];
+        const markers = [];
+
+        puntos.forEach((p) => {
+            const marker = L.marker(p.coords).addTo(map);
+            marker.bindPopup(`
+                <div class="font-sans min-w-[200px]">
+                    <h3 class="font-bold text-amber-800 text-base mb-2 border-b border-amber-100 pb-1">${p.nombre}</h3>
+                    <p class="text-sm text-stone-600 leading-relaxed m-0">${p.texto}</p>
+                </div>
+            `, {
+                className: 'custom-popup'
+            });
+            markers.push(marker);
+            rutaCoords.push(p.coords);
+        });
+
+        if (rutaCoords.length > 0) {
+            L.polyline(rutaCoords, {
+                color: '#d97706',
+                weight: 4,
+                opacity: 0.8,
+                dashArray: '10, 10', 
+                lineCap: 'round'
+            }).addTo(map);
+
+            map.fitBounds(rutaCoords, { padding: [50, 50] });
+        }
+        
+        // Remove loading
+        const loader = document.getElementById('map-loading');
+        if(loader) loader.style.display = 'none';
+
+        // Fullscreen Logic
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const iconExpand = document.getElementById('icon-expand');
+        const iconCompress = document.getElementById('icon-compress');
+
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => {
+                container.classList.toggle('leaflet-fullscreen-on');
+                
+                // Toggle icons
+                iconExpand.classList.toggle('hidden');
+                iconCompress.classList.toggle('hidden');
+
+                // Force map resize recalculation after transition
+                setTimeout(() => {
+                    map.invalidateSize();
+                    if (rutaCoords.length > 0) {
+                         map.fitBounds(rutaCoords, { padding: [50, 50] });
+                    }
+                }, 300);
+            });
+        }
+
+        // Copy URL Logic
+        const embedBtn = document.getElementById('embed-btn');
+        const toast = document.getElementById('toast');
+
+        if (embedBtn) {
+            embedBtn.addEventListener('click', () => {
+                const url = window.location.origin + '/map-embed';
+                navigator.clipboard.writeText(url).then(() => {
+                    if (toast) {
+                        toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+                        toast.classList.add('translate-y-0', 'opacity-100');
+                        setTimeout(() => {
+                            toast.classList.remove('translate-y-0', 'opacity-100');
+                            toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                        }, 2500);
+                    }
+                });
+            });
+        }
+    }
+</script>
+
+<script define:vars={{ puntosStr: JSON.stringify(puntos) }}>
+    document.getElementById('map-wrapper').dataset.puntos = puntosStr;
+</script>
+
+<style>
+    :global(.leaflet-popup-content-wrapper) {
+        border-radius: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        padding: 0;
+    }
+    :global(.leaflet-popup-content) {
+        margin: 1rem;
+    }
+    :global(.leaflet-container) {
+        font-family: 'Inter', sans-serif;
+    }
+</style>

@@ -1,0 +1,11 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Map from '../components/Map.astro';
+import { puntos } from '../data/points.js';
+---
+
+<Layout title="Mapa - Ruta de los Azulejos Cervantinos">
+    <div class="w-screen h-screen">
+        <Map puntos={puntos} isEmbedPage={true} />
+    </div>
+</Layout>
